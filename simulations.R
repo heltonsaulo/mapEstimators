@@ -1,4 +1,143 @@
 
+                            
+################################################################################
+## Monte Carlo: Bias and MSE
+################################################################################
+seed_set <- 35151
+amostras <- c(15, 30, 60, 120, 240, 480, 760)
+
+simulate_monte_carlo_estimators <- function(
+    models = c("gamma", "inv_gamma", "weibull", "inv_weibull"),
+    ns = amostras,
+    mu_vals = c(2),
+    sigma_vals = c(1),
+    delta = 1.5,
+    B = 10000,
+    alpha2 = 1/100, beta2 = 1/100,
+    p = 1
+) {
+  results <- list()
+
+  for (model in models) {
+    for (mu in mu_vals) {
+      for (sigma in sigma_vals) {
+        for (n in ns) {
+
+          est_mu <- numeric(B)
+          est_sigma <- numeric(B)
+
+          for (b in 1:B) {
+            x <- tryCatch({
+              rgeneric_expfam(n = n, model = model, mu = mu, sigma = sigma, delta = delta, p = p)
+            }, error = function(e) return(NULL))
+
+            if (is.null(x)) next
+
+            est <- tryCatch({
+              estimate_from_table1_model_analytic(x, model = model, delta = delta,
+                                                  alpha2 = alpha2, beta2 = beta2, p = p)
+            }, error = function(e) return(list(mu = NA, sigma = NA)))
+
+            est_mu[b] <- est$mu
+            est_sigma[b] <- est$sigma
+          }
+
+          df <- data.frame(
+            model = model,
+            n = n,
+            mu = mu,
+            sigma = sigma,
+            bias_mu = abs((mean(est_mu, na.rm = TRUE) - mu)/mu),
+            bias_sigma = abs((mean(est_sigma, na.rm = TRUE) - sigma)/sigma),
+            mse_mu = mean((est_mu - mu)^2, na.rm = TRUE),
+            mse_sigma = mean((est_sigma - sigma)^2, na.rm = TRUE)
+          )
+
+          results[[length(results) + 1]] <- df
+        }
+      }
+    }
+  }
+
+  final_results <- do.call(rbind, results)
+  return(final_results)
+}
+
+set.seed(seed_set)
+results <- simulate_monte_carlo_estimators()
+model_names <- c(
+  gamma = "Gamma",
+  inv_gamma = "Inverse Gamma",
+  weibull = "Weibull",
+  inv_weibull = "Inverse Weibull"
+)
+
+results <- results %>%
+  mutate(Model = model_names[model]) %>%
+  mutate(Model = factor(Model, levels = unique(model_names)))
+
+linetypes <- c("Gamma" = "solid", "Inverse Gamma" = "dashed",
+               "Weibull" = "dotdash", "Inverse Weibull" = "twodash")
+
+colors <- c("Gamma" = "#1b9e77", "Inverse Gamma" = "#d95f02",
+            "Weibull" = "#7570b3", "Inverse Weibull" = "#e7298a")
+
+base_font_size <- 13
+
+p1 <- ggplot(results, aes(x = n, y = bias_mu, color = Model, linetype = Model)) +
+  geom_line(size = 1) + geom_point() +
+  labs(title = expression("Relative Bias of the Estimator of " * mu),
+       x = "Sample Size (n)", y = "Relative Bias") +
+  scale_color_manual(values = colors) +
+  scale_linetype_manual(values = linetypes) +
+  theme_classic(base_size = base_font_size) +
+  theme(legend.title = element_text(size = base_font_size),
+        legend.text = element_text(size = base_font_size),
+        axis.title = element_text(size = base_font_size),
+        axis.text = element_text(size = base_font_size))
+ggsave("bias_mu.eps", plot = p1, device = "eps", width = 6, height = 4)
+
+p2 <- ggplot(results, aes(x = n, y = mse_mu, color = Model, linetype = Model)) +
+  geom_line(size = 1) + geom_point() +
+  labs(title = expression("MSE of the Estimator of " * mu),
+       x = "Sample Size (n)", y = "MSE") +
+  scale_color_manual(values = colors) +
+  scale_linetype_manual(values = linetypes) +
+  theme_classic(base_size = base_font_size) +
+  theme(legend.title = element_text(size = base_font_size),
+        legend.text = element_text(size = base_font_size),
+        axis.title = element_text(size = base_font_size),
+        axis.text = element_text(size = base_font_size))
+ggsave("mse_mu.eps", plot = p2, device = "eps", width = 6, height = 4)
+
+p3 <- ggplot(results, aes(x = n, y = bias_sigma, color = Model, linetype = Model)) +
+  geom_line(size = 1) + geom_point() +
+  labs(title = expression("Relative Bias of the Estimator of " * sigma),
+       x = "Sample Size (n)", y = "Relative Bias") +
+  scale_color_manual(values = colors) +
+  scale_linetype_manual(values = linetypes) +
+  theme_classic(base_size = base_font_size) +
+  theme(legend.title = element_text(size = base_font_size),
+        legend.text = element_text(size = base_font_size),
+        axis.title = element_text(size = base_font_size),
+        axis.text = element_text(size = base_font_size))
+ggsave("bias_sigma.eps", plot = p3, device = "eps", width = 6, height = 4)
+
+p4 <- ggplot(results, aes(x = n, y = mse_sigma, color = Model, linetype = Model)) +
+  geom_line(size = 1) + geom_point() +
+  labs(title = expression("MSE of the Estimator of " * sigma),
+       x = "Sample Size (n)", y = "MSE") +
+  scale_color_manual(values = colors) +
+  scale_linetype_manual(values = linetypes) +
+  theme_classic(base_size = base_font_size) +
+  theme(legend.title = element_text(size = base_font_size),
+        legend.text = element_text(size = base_font_size),
+        axis.title = element_text(size = base_font_size),
+        axis.text = element_text(size = base_font_size))
+ggsave("mse_sigma.eps", plot = p4, device = "eps", width = 6, height = 4)
+
+
+                            
 ################################################################################
 ## Monte Carlo: Compare Analytic vs MAP vs ML
 ################################################################################
