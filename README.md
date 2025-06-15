@@ -1,4 +1,6 @@
-# Exponential-Family Transformation Analysis
+## Closed-form solutions for parameter estimation in exponential families based on maximum a posteriori equations
+## Author:	Helton Saulo [aut, cre], Roberto Vila [aut], Eduardo Nakano [aut]
+
 
 This project implements:
 
