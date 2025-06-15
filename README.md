@@ -22,7 +22,7 @@ This project implements:
   - Numeric MAP estimator  
   - MLE for the Gamma model
 
-- `R/simulation.R`  
+- `R/simulations.R`  
   - Runs the Monte Carlo comparison  
   - Produces two ggplot2 figures: relative bias and MSE
 
